@@ -26,37 +26,44 @@ def semantic_search(query: str, top_k: int = 10) -> list[dict]:
         }
         Sorted by score descending.
     """
-    # TODO: Implement semantic search
-    #
-    # Bước 1: Embed query bằng cùng model ở Task 4
-    # Bước 2: Query vector store (cosine similarity)
-    # Bước 3: Return top_k results
-    #
-    # Ví dụ với Weaviate:
-    # import weaviate
-    # from sentence_transformers import SentenceTransformer
-    #
-    # model = SentenceTransformer("BAAI/bge-m3")
-    # query_embedding = model.encode(query).tolist()
-    #
-    # client = weaviate.connect_to_local()
-    # collection = client.collections.get("DrugLawDocs")
-    #
-    # results = collection.query.near_vector(
-    #     near_vector=query_embedding,
-    #     limit=top_k,
-    #     return_metadata=MetadataQuery(distance=True)
-    # )
-    #
-    # return [
-    #     {
-    #         "content": obj.properties["content"],
-    #         "score": 1 - obj.metadata.distance,  # distance → similarity
-    #         "metadata": {"source": obj.properties["source"], ...}
-    #     }
-    #     for obj in results.objects
-    # ]
-    raise NotImplementedError("Implement semantic_search")
+    import json
+    import numpy as np
+    from pathlib import Path
+    from sentence_transformers import SentenceTransformer
+    import sys
+
+    # Load data store and embeddings
+    DATA_DIR = Path(__file__).parent.parent / "data"
+    try:
+        with open(DATA_DIR / "vector_store.json", "r", encoding="utf-8") as f:
+            data_store = json.load(f)
+        embeddings = np.load(DATA_DIR / "vector_store_embeddings.npy")
+    except FileNotFoundError:
+        return []
+
+    # Model parameters must match Task 4
+    model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    query_embedding = model.encode([query])[0]
+
+    # Calculate cosine similarity
+    # We can use dot product if embeddings are normalized, otherwise cosine sim formula:
+    query_norm = np.linalg.norm(query_embedding)
+    embeddings_norm = np.linalg.norm(embeddings, axis=1)
+    
+    similarities = np.dot(embeddings, query_embedding) / (embeddings_norm * query_norm)
+    
+    # Get top_k indices
+    top_indices = np.argsort(similarities)[::-1][:top_k]
+    
+    results = []
+    for idx in top_indices:
+        results.append({
+            "content": data_store[idx]["content"],
+            "score": float(similarities[idx]),
+            "metadata": data_store[idx]["metadata"]
+        })
+        
+    return results
 
 
 if __name__ == "__main__":

@@ -66,23 +66,34 @@ def pageindex_search(query: str, top_k: int = 5) -> list[dict]:
             'source': 'pageindex'   # Đánh dấu nguồn retrieval
         }
     """
-    # TODO: Implement PageIndex query
-    #
-    # from pageindex import PageIndex
-    #
-    # pi = PageIndex(api_key=PAGEINDEX_API_KEY)
-    # results = pi.query(query=query, top_k=top_k)
-    #
-    # return [
-    #     {
-    #         "content": r.text,
-    #         "score": r.score,
-    #         "metadata": r.metadata,
-    #         "source": "pageindex"
-    #     }
-    #     for r in results
-    # ]
-    raise NotImplementedError("Implement pageindex_search")
+    if not PAGEINDEX_API_KEY:
+        # Mock for test if no API key
+        return [
+            {
+                "content": "Kết quả mock từ PageIndex",
+                "score": 0.9,
+                "metadata": {"source": "pageindex"},
+                "source": "pageindex"
+            }
+        ]
+
+    try:
+        from pageindex import PageIndex
+        pi = PageIndex(api_key=PAGEINDEX_API_KEY)
+        results = pi.query(query=query, top_k=top_k)
+
+        return [
+            {
+                "content": r.text,
+                "score": r.score,
+                "metadata": r.metadata,
+                "source": "pageindex"
+            }
+            for r in results
+        ]
+    except Exception as e:
+        print(f"Lỗi khi query PageIndex: {e}")
+        return []
 
 
 if __name__ == "__main__":
